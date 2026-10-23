@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sponsor Editor</title>
+<style>
+  :root {
+    --bg: #fbf6ee; --card: #ffffff; --ink: #23242b; --muted: #6c6a73;
+    --line: #eadfcb; --accent: #d9541e; --accent-ink: #ffffff; --tint: #fff1d2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #10121a; --card: #1a1d29; --ink: #f1ece3; --muted: #a7a5b3;
+            --line: #30354a; --accent: #ff9a62; --accent-ink: #10121a; --tint: #242838; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, "Noto Sans Oriya", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 22px; margin: 8px 0 4px; }
+  p.lead { color: var(--muted); margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+          padding: 16px; margin-bottom: 14px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 3px; }
+  input[type=text], input[type=date], input[type=tel], textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--ink); font: inherit; }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 4px; }
+  .checks label { display: inline-flex; gap: 6px; align-items: center; color: var(--ink);
+                  font-size: 14px; margin: 0; }
+  button { border: 0; border-radius: 999px; padding: 9px 16px; font: inherit; cursor: pointer;
+           background: var(--tint); color: var(--ink); }
+  button.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button.danger { background: transparent; color: #c0392b; border: 1px solid #c0392b55; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .head strong { font-size: 17px; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .status { min-height: 1.4em; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sponsor Editor</h1>
+  <p class="lead">Add or change the app's local sponsors. Open your <b>sponsors.json</b>,
+    edit, then <b>Download</b> and upload the new file to GitHub. Pictures go in the
+    <b>images</b> folder; type their names here (for example <code>images/shop-poster.jpg</code>).
+    Use a new picture name whenever a picture changes. Animated pictures (.webp or .gif, under 1&nbsp;MB) work too.</p>
+
+  <div class="bar">
+    <button onclick="document.getElementById('file').click()">Open sponsors.json</button>
+    <input id="file" type="file" accept=".json,application/json" hidden>
+    <button onclick="addSponsor()">+ Add sponsor</button>
+    <button class="primary" onclick="download()">Download sponsors.json</button>
+  </div>
+  <div class="status" id="status"></div>
+  <div id="list"></div>
+</main>
+
+<script>
+const PLACES = [
+  ['home', 'Home page (top)'],
+  ['festival', 'Festival pages'],
+  ['calendar', 'Calendar strip'],
+  ['greeting', 'Greeting pictures'],
+];
+let data = { sponsors: [] };
+
+function el(tag, attrs = {}, kids = []) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'text') e.textContent = v; else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v);
+  }
+  for (const kid of kids) e.append(kid);
+  return e;
+}
+
+function field(s, key, labelText, sub, type = 'text', hint = '') {
+  const value = sub ? (s[key] && s[key][sub]) || '' : s[key] || '';
+  const input = el('input', { type });
+  input.value = value;
+  input.oninput = () => {
+    if (sub) {
+      s[key] = Object.assign({}, typeof s[key] === 'object' ? s[key] : {});
+      s[key][sub] = input.value;
+    } else {
+      s[key] = input.value;
+    }
+  };
+  const box = el('div', {}, [el('label', { text: labelText }), input]);
+  if (hint) box.append(el('div', { class: 'hint', text: hint }));
+  return box;
+}
+
+function render() {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  data.sponsors.forEach((s, i) => {
+    s.placements = s.placements || [];
+    const checks = el('div', { class: 'checks' });
+    for (const [value, text] of PLACES) {
+      const box = el('input', { type: 'checkbox' });
+      box.checked = s.placements.includes(value);
+      box.onchange = () => {
+        s.placements = PLACES.map(p => p[0]).filter(p =>
+          p === value ? box.checked : s.placements.includes(p));
+      };
+      checks.append(el('label', {}, [box, text]));
+    }
+    const festivals = el('input', { type: 'text' });
+    festivals.value = (s.festivals || []).join(', ');
+    festivals.oninput = () => {
+      s.festivals = festivals.value.split(',').map(x => x.trim()).filter(Boolean);
+    };
+    list.append(el('div', { class: 'card' }, [
+      el('div', { class: 'head' }, [
+        el('strong', { text: (s.name && (s.name.en || s.name.or)) || 'New sponsor' }),
+        el('button', { class: 'danger', text: 'Remove', onclick: () => {
+          if (confirm('Remove this sponsor?')) { data.sponsors.splice(i, 1); render(); }
+        } }),
+      ]),
+      el('div', { class: 'row' }, [
+        field(s, 'name', 'Name (Odia)', 'or'), field(s, 'name', 'Name (English)', 'en'),
+        field(s, 'place', 'Place (Odia)', 'or'), field(s, 'place', 'Place (English)', 'en'),
+        field(s, 'heading', 'Line above the card (Odia)', 'or'),
+        field(s, 'heading', 'Line above the card (English)', 'en'),
+        field(s, 'offer', 'Offer, if no poster (Odia)', 'or'),
+        field(s, 'offer', 'Offer, if no poster (English)', 'en'),
+        field(s, 'start', 'First day shown', null, 'date'),
+        field(s, 'end', 'Last day shown', null, 'date'),
+        field(s, 'phone', 'Phone', null, 'tel'),
+        field(s, 'whatsapp', 'WhatsApp number', null, 'tel'),
+        field(s, 'map', 'Google Maps link', null, 'text'),
+        field(s, 'website', 'Website', null, 'text'),
+        field(s, 'poster', 'Poster picture 16:9 (1200 x 675)', null, 'text', 'Home page and festival pages'),
+        field(s, 'strip', 'Calendar strip 4:1 (1200 x 300)', null, 'text'),
+        field(s, 'greetingStrip', 'Greeting strip 6:1 (1200 x 200)', null, 'text'),
+        field(s, 'logo', 'Logo (square), if no poster', null, 'text'),
+      ]),
+      el('label', { text: 'Show on' }), checks,
+      el('label', { text: 'Festivals (for festival pages and greetings; empty = all)' }), festivals,
+      el('div', { class: 'hint', text: 'Festival ids, e.g. dussehra, diwali, rath-yatra, kumar-purnima' }),
+    ]));
+  });
+  document.getElementById('status').textContent =
+    data.sponsors.length + ' sponsor(s). Remember to download and upload when done.';
+}
+
+function addSponsor() {
+  const today = new Date().toISOString().slice(0, 10);
+  data.sponsors.push({
+    id: 'sponsor-' + Date.now(), name: { or: '', en: '' },
+    start: today, end: today, placements: ['home'], festivals: [],
+  });
+  render();
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+function clean(value) {
+  if (Array.isArray(value)) return value.map(clean);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      const c = clean(v);
+      if (c === '' || c == null) continue;
+      if (typeof c === 'object' && !Array.isArray(c) && Object.keys(c).length === 0) continue;
+      out[k] = c;
+    }
+    return out;
+  }
+  return typeof value === 'string' ? value.trim() : value;
+}
+
+function download() {
+  for (const s of data.sponsors) {
+    if (!s.name || !(s.name.or || s.name.en)) { alert('Every sponsor needs a name.'); return; }
+    if (!s.start || !s.end || s.end < s.start) { alert('Check the dates of ' + (s.name.en || s.name.or)); return; }
+  }
+  const text = JSON.stringify(clean(data), null, 2) + '\n';
+  const link = el('a', { href: URL.createObjectURL(new Blob([text], { type: 'application/json' })),
+                         download: 'sponsors.json' });
+  link.click();
+  document.getElementById('status').textContent = 'Downloaded. Now upload it to GitHub (replace the old one).';
+}
+
+document.getElementById('file').onchange = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    if (!Array.isArray(parsed.sponsors)) throw new Error();
+    data = parsed;
+    render();
+  } catch {
+    alert('That is not a sponsors.json file.');
+  }
+};
+
+render();
+</script>
+</body>
+</html>

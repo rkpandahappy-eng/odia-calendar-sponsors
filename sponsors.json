@@ -1,0 +1,68 @@
+{
+  "note": "Sponsor file for New Odia Calendar. Edit it with editor.html. Dates are year-month-day.",
+  "sponsors": [
+    {
+      "id": "demo-jewellers-dussehra-2026",
+      "name": {
+        "or": "ଡେମୋ ଜୁଏଲର୍ସ",
+        "en": "Demo Jewellers"
+      },
+      "place": {
+        "or": "ବାଦାମବାଡ଼ି, କଟକ",
+        "en": "Badambadi, Cuttack"
+      },
+      "heading": {
+        "or": "ଦଶହରା ଶୁଭେଚ୍ଛା — ସୌଜନ୍ୟରେ",
+        "en": "Dussehra greetings — courtesy of"
+      },
+      "poster": "images/demo-jewellers-poster-animated.webp",
+      "strip": "images/demo-jewellers-strip.jpg",
+      "greetingStrip": "images/demo-jewellers-greeting.jpg",
+      "phone": "9000000000",
+      "whatsapp": "9000000000",
+      "map": "https://maps.google.com/?q=Badambadi,Cuttack",
+      "start": "2026-10-15",
+      "end": "2026-10-31",
+      "placements": [
+        "home",
+        "festival",
+        "calendar",
+        "greeting"
+      ],
+      "festivals": [
+        "dussehra",
+        "durga-ashtami",
+        "maha-navami",
+        "kumar-purnima",
+        "gaja-laxmi-puja"
+      ]
+    },
+    {
+      "id": "demo-sweets-diwali-2026",
+      "name": {
+        "or": "ଡେମୋ ମିଠା ଦୋକାନ",
+        "en": "Demo Sweet Shop"
+      },
+      "place": {
+        "or": "ମାଷ୍ଟର କ୍ୟାଣ୍ଟିନ, ଭୁବନେଶ୍ୱର",
+        "en": "Master Canteen, Bhubaneswar"
+      },
+      "offer": {
+        "or": "ଦୀପାବଳି ମିଠା ବାକ୍ସ ଉପରେ ୧୫% ଛାଡ଼",
+        "en": "15% off Diwali sweet boxes"
+      },
+      "logo": "images/demo-sweets-logo.png",
+      "phone": "9000000001",
+      "start": "2026-10-15",
+      "end": "2026-11-10",
+      "placements": [
+        "festival",
+        "greeting"
+      ],
+      "festivals": [
+        "dhanteras",
+        "diwali"
+      ]
+    }
+  ]
+}
