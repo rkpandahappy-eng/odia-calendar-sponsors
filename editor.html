@@ -39,6 +39,15 @@
   .head strong { font-size: 17px; }
   .hint { font-size: 12px; color: var(--muted); }
   .status { min-height: 1.4em; color: var(--muted); }
+  .switch-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .switch { position: relative; width: 58px; height: 32px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; border-radius: 999px; background: #9a96a3; transition: .2s; cursor: pointer; }
+  .slider::before { content: ""; position: absolute; width: 24px; height: 24px; left: 4px; top: 4px;
+                    border-radius: 50%; background: #fff; transition: .2s; }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(26px); }
+  #onoffText { font-weight: 700; }
 </style>
 </head>
 <body>
@@ -54,6 +63,25 @@
     <input id="file" type="file" accept=".json,application/json" hidden>
     <button onclick="addSponsor()">+ Add sponsor</button>
     <button class="primary" onclick="download()">Download sponsors.json</button>
+  </div>
+  <div class="card switch-card">
+    <div>
+      <strong>Show sponsors in the app</strong>
+      <div class="hint" id="onoffText"></div>
+      <div class="hint">Off hides every sponsor and your "Advertise here" card on all phones
+        (after you upload the file). Your sponsor list is kept for when you switch it on again.</div>
+    </div>
+    <label class="switch"><input id="enabled" type="checkbox"><span class="slider"></span></label>
+  </div>
+  <div class="card">
+    <div class="head"><strong>"Advertise here" card</strong></div>
+    <p class="hint">Shown at the top of the Today page on some days when no sponsor is running,
+      inviting shops to advertise. It only appears once a WhatsApp or phone number is filled in.</p>
+    <div class="row">
+      <div><label>Your WhatsApp number</label><input id="adWhatsapp" type="tel"></div>
+      <div><label>Your phone number</label><input id="adPhone" type="tel"></div>
+      <div><label>Show one day in every … days</label><input id="adEvery" type="text" inputmode="numeric" placeholder="3"></div>
+    </div>
   </div>
   <div class="status" id="status"></div>
   <div id="list"></div>
@@ -94,7 +122,63 @@ function field(s, key, labelText, sub, type = 'text', hint = '') {
   return box;
 }
 
+function bindAdvertise() {
+  data.advertise = data.advertise || {};
+  const a = data.advertise;
+  const map = { adWhatsapp: 'whatsapp', adPhone: 'phone', adEvery: 'everyDays' };
+  for (const [id, key] of Object.entries(map)) {
+    const input = document.getElementById(id);
+    input.value = a[key] == null ? '' : a[key];
+    input.oninput = () => {
+      const v = input.value.trim();
+      a[key] = key === 'everyDays' ? (parseInt(v, 10) || null) : v;
+    };
+  }
+}
+
+function bindSwitch() {
+  const box = document.getElementById('enabled');
+  const text = document.getElementById('onoffText');
+  const show = () => {
+    text.textContent = box.checked ? 'ON: sponsors are shown' : 'OFF: no sponsors are shown';
+    text.style.color = box.checked ? '#1e8a5b' : '#c0392b';
+  };
+  box.checked = data.enabled !== false;
+  box.onchange = () => { data.enabled = box.checked; show(); };
+  show();
+}
+
+// Remove asks on the page itself (first click arms it, second removes),
+// because pop-up questions are blocked in some browsers and previews.
+function removeButton(index) {
+  const button = el('button', { class: 'danger', text: 'Remove' });
+  let timer = null;
+  button.onclick = () => {
+    if (button.dataset.armed) {
+      clearTimeout(timer);
+      data.sponsors.splice(index, 1);
+      render();
+      document.getElementById('status').textContent =
+        'Sponsor removed. Remember to download and upload.';
+      return;
+    }
+    button.dataset.armed = '1';
+    button.textContent = 'Click again to remove';
+    button.style.background = '#c0392b';
+    button.style.color = '#fff';
+    timer = setTimeout(() => {
+      delete button.dataset.armed;
+      button.textContent = 'Remove';
+      button.style.background = '';
+      button.style.color = '';
+    }, 4000);
+  };
+  return button;
+}
+
 function render() {
+  bindSwitch();
+  bindAdvertise();
   const list = document.getElementById('list');
   list.innerHTML = '';
   data.sponsors.forEach((s, i) => {
@@ -117,9 +201,7 @@ function render() {
     list.append(el('div', { class: 'card' }, [
       el('div', { class: 'head' }, [
         el('strong', { text: (s.name && (s.name.en || s.name.or)) || 'New sponsor' }),
-        el('button', { class: 'danger', text: 'Remove', onclick: () => {
-          if (confirm('Remove this sponsor?')) { data.sponsors.splice(i, 1); render(); }
-        } }),
+        removeButton(i),
       ]),
       el('div', { class: 'row' }, [
         field(s, 'name', 'Name (Odia)', 'or'), field(s, 'name', 'Name (English)', 'en'),
