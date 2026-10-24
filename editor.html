@@ -280,7 +280,32 @@ document.getElementById('file').onchange = async (event) => {
   }
 };
 
-render();
+// Opened from the GitHub site (or any web address): load the live
+// sponsors.json straight away. Opened as a file on the computer, browsers
+// do not allow that, so it asks for the file instead.
+async function autoLoad() {
+  const status = document.getElementById('status');
+  if (location.protocol === 'file:') {
+    render();
+    status.innerHTML = '<b>Click "Open sponsors.json"</b> and choose the sponsors.json file ' +
+      'in the same folder to see and edit your sponsors.';
+    return;
+  }
+  try {
+    const response = await fetch('sponsors.json?' + Date.now(), { cache: 'no-store' });
+    const parsed = await response.json();
+    if (!Array.isArray(parsed.sponsors)) throw new Error();
+    data = parsed;
+    render();
+    status.textContent = 'Loaded the live sponsors.json from this site. ' +
+      'Edit, then Download and upload it to GitHub.';
+  } catch {
+    render();
+    status.innerHTML = '<b>Click "Open sponsors.json"</b> to load your sponsor file.';
+  }
+}
+
+autoLoad();
 </script>
 </body>
 </html>
